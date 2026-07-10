@@ -157,8 +157,8 @@ export default function GapAnalysisPage() {
   ];
 
   const dynamicBarSkills = [
-    ...matchedSkills.slice(0, 4).map(s => ({ name: s.name, percentage: 95, level: 'Strong', color: '#10B981' })),
-    ...missingSkills.slice(0, 2).map(s => ({ name: s.name, percentage: 20, level: 'Needs Review', color: '#EF4444' }))
+    ...matchedSkills.slice(0, 4).map(s => ({ name: s, percentage: 95, level: 'Strong', color: '#10B981' })),
+    ...missingSkills.slice(0, 2).map(s => ({ name: s, percentage: 20, level: 'Needs Review', color: '#EF4444' }))
   ];
 
   return (
@@ -172,6 +172,15 @@ export default function GapAnalysisPage() {
           <p className="text-[#6B7280] font-medium text-sm lg:text-base mt-2">
             We've compared your resume against the <span className="font-bold text-[#111827]">{analysisData?.jobTitle}</span> role at <span className="font-bold text-[#111827]">{analysisData?.company}</span>. Here's how you stack up.
           </p>
+
+          {analysisData?.feedback && (
+            <div className="mt-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-start gap-3">
+              <Sparkles className="text-indigo-500 mt-0.5 shrink-0" size={18} />
+              <p className="text-sm text-indigo-900 leading-relaxed font-medium">
+                {analysisData.feedback}
+              </p>
+            </div>
+          )}
         </motion.div>
 
         <motion.div variants={itemVar} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -185,7 +194,7 @@ export default function GapAnalysisPage() {
               <div className="flex flex-wrap gap-2">
                 {matchedSkills.map((skill, i) => (
                   <motion.div
-                    key={skill.name + i}
+                    key={skill + i}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: i * 0.05, type: 'spring', stiffness: 200 }}
@@ -193,7 +202,7 @@ export default function GapAnalysisPage() {
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border select-none bg-[#ECFDF5] border-emerald-200 text-emerald-700`}
                   >
                     <CheckCircle2 size={13} />
-                    {skill.name}
+                    {skill}
                   </motion.div>
                 ))}
               </div>
@@ -230,7 +239,12 @@ export default function GapAnalysisPage() {
 
             <div className="mt-6 relative overflow-hidden px-4.5 py-1.5 bg-gradient-to-r from-[#EFF6FF] to-[#F5F3FF] border border-[#E5E7EB] rounded-full text-xs font-bold text-[#4F46E5] flex items-center gap-1.5 shadow-sm">
               <Sparkles size={13} className="text-[#F59E0B]" />
-              <span>AI Insights: Highly Compatible</span>
+              <span>
+                AI Insights:{' '}
+                {atsScore >= 80 ? 'Highly Compatible' : 
+                 atsScore >= 60 ? 'Good Match' : 
+                 atsScore >= 40 ? 'Partial Match' : 'Needs Improvement'}
+              </span>
               <div className="absolute top-0 -inset-full h-full w-1/2 z-5 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-12 animate-shimmer"
                 style={{
                   animation: 'shimmer 2.5s infinite',
@@ -242,18 +256,20 @@ export default function GapAnalysisPage() {
             <div className="mt-5 w-full max-w-[200px] flex flex-col items-center">
               <div className="flex items-center justify-between w-full text-[10px] font-bold text-[#6B7280] mb-1">
                 <span>ATS Score</span>
-                <span className="text-[#10B981]">85%</span>
+                <span className="text-[#10B981]">{atsScore}%</span>
               </div>
               <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: '85%' }}
+                  animate={{ width: `${atsScore}%` }}
                   transition={{ duration: 1.2, ease: 'easeOut', delay: 0.2 }}
                   className="h-full bg-[#10B981]"
                 />
               </div>
-              <span className="mt-1.5 flex items-center gap-1 text-[9px] font-extrabold text-[#10B981] uppercase tracking-wider bg-[#ECFDF5] px-2 py-0.5 rounded-full">
-                Passes ATS Screening ✓
+              <span className={`mt-1.5 flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full
+                ${atsScore >= 75 ? 'text-[#10B981] bg-[#ECFDF5]' : 'text-[#F59E0B] bg-[#FFFBEB]'}
+              `}>
+                {atsScore >= 75 ? 'Passes ATS Screening ✓' : 'Needs Optimization ⚠️'}
               </span>
             </div>
           </div>
@@ -274,7 +290,7 @@ export default function GapAnalysisPage() {
                     className="flex items-start gap-2.5 leading-relaxed"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] mt-1.5 shrink-0" />
-                    <span><span className="font-bold">{req.name}</span>: {req.impact}</span>
+                    <span><span className="font-bold">{req}</span></span>
                   </motion.li>
                 ))}
               </ul>
@@ -439,7 +455,7 @@ export default function GapAnalysisPage() {
               <div className="space-y-3.5">
                 {missingSkills.map((item, idx) => (
                   <motion.div
-                    key={item.name + idx}
+                    key={item + idx}
                     whileHover={{ y: -2 }}
                     className="bg-white rounded-xl p-4 border border-[#E5E7EB] flex items-start justify-between gap-4 shadow-sm hover:shadow-md transition-all"
                   >
@@ -448,8 +464,8 @@ export default function GapAnalysisPage() {
                         <Layers size={15} />
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-[#111827]">{item.name}</h4>
-                        <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">{item.impact}</p>
+                        <h4 className="text-xs font-bold text-[#111827]">{item}</h4>
+                        <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">Required for this role.</p>
                       </div>
                     </div>
                     <span className={`text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full tracking-wider bg-[#FEF2F2] text-[#EF4444]`}>
@@ -720,8 +736,8 @@ export default function GapAnalysisPage() {
         {/* ── Footer ── */}
         <footer className="border-t border-[#E5E7EB] pt-6 pb-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B7280] mt-8">
           <div>
-            <span className="font-extrabold text-[#2563EB] text-sm">ResumeAI Analyzer</span>
-            <p className="mt-0.5">© 2024 ResumeAI Analyzer. All rights reserved.</p>
+            <span className="font-extrabold text-[#2563EB] text-sm">Avenir AI</span>
+            <p className="mt-0.5">&copy; {new Date().getFullYear()} Avenir AI. All rights reserved.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {['Sitemap', 'Privacy Policy', 'Terms of Service', 'Support'].map((link, i) => (

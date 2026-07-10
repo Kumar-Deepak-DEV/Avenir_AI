@@ -72,14 +72,43 @@ const analyzeGap = async (req, res) => {
 You are an expert ATS (Applicant Tracking System) software and Technical Recruiter.
 Evaluate the following Resume against the provided Job Description.
 
-Calculate an ATS match score from 0 to 100 based on the following criteria:
-1. Hard Skills Match (40%)
-2. Experience and Qualifications (30%)
-3. Education (10%)
-4. Keyword optimization & Impact metrics (20%)
+Calculate an ATS match score from 0 to 100 based strictly on the following formula:
+
+1. Skills Match (35 Points)
+- Formula: (Matched Skills / Required Skills) * 35. 
+- Allow Full Matches (100%), Alias Matches (NodeJS == Node.js, 80%), and Related Matches (AWS EC2 -> AWS, 50%).
+
+2. Keyword Match (20 Points)
+- Extract important keywords from JD (e.g. REST API, Agile, Microservices, CI/CD).
+- Formula: (Matched Keywords / Total Keywords) * 20.
+
+3. Experience Match (15 Points)
+- Extract Required Experience from JD vs Resume Experience.
+- >= required = 15 pts
+- 80%-99% = 12 pts
+- 60%-79% = 8 pts
+- <60% = 4 pts
+- NOTE: Adjust your leniency based on the seniority level implied by the Job Description. If it is an entry-level, intern, or junior role, grade them relative to what is expected of a Junior.
+
+4. Projects Relevance (10 Points)
+- Analyze project stack relevance to JD stack.
+- Score: (Matched Project Tech / JD Tech) * 10.
+
+5. Education Match (5 Points)
+- E.g. JD requires Bachelor's, Resume has B.Tech = 5 pts. JD requires Master's, Resume has Bachelor's = 3 pts.
+
+6. Resume Quality (15 Points)
+- Contact Info (3 pts): Name, Email, Phone (1 pt each).
+- Links (2 pts): LinkedIn, GitHub, or Portfolio presence.
+- Length (2 pts): 1 page = 2, 2 pages = 1, 3+ pages = 0.
+- Sections Present (4 pts): Education, Skills, Projects, Experience (1 pt each).
+- Action Verbs (2 pts): 10+ verbs = 2, 5+ verbs = 1, else = 0.
+- Formatting Quality (2 pts): Readable text, well-structured.
+
+Calculate the final score by summing these 6 sections (Total = 100).
 
 Provide a list of matched skills (skills the candidate has that are in the JD) and missing skills (skills in the JD the candidate lacks).
-Also provide a short 2-3 sentence overall feedback.
+Also provide a short 2-3 sentence overall feedback explaining the score calculation.
 
 Output the response STRICTLY as a JSON object with the following schema:
 {

@@ -64,55 +64,36 @@ export default function DashboardPage({ onNavigate }) {
   const [statusText, setStatusText] = useState('Parsing document structure...');
   const fileInputRef = useRef(null);
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    simulateAnalysis(file.name);
-  };
+  // Real Data states
+  const [analysisData, setAnalysisData] = useState(null);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    simulateAnalysis(file.name);
-  };
-
-  const simulateAnalysis = (name) => {
-    setUploading(true);
-    setUploadProgress(0);
-    setStatusText('Reading file bytes...');
-    
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 5;
-      if (progress <= 100) {
-        setUploadProgress(progress);
-        if (progress === 20) setStatusText('Parsing resume layout and blocks...');
-        if (progress === 50) setStatusText('Extracting technical skill nodes...');
-        if (progress === 80) setStatusText('Checking compliance against standard ATS parsers...');
-        if (progress === 100) setStatusText('Finalizing career profile analysis!');
-      } else {
-        clearInterval(interval);
-        setTimeout(() => {
-          setHasResume(true);
-          setResumeName(name);
-          localStorage.setItem('avenir_has_resume', 'true');
-          localStorage.setItem('avenir_resume_name', name);
-          setUploading(false);
-        }, 300);
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      const analysisId = localStorage.getItem('avenir_analysis_id');
+      const token = localStorage.getItem('token');
+      if (hasResume && analysisId && token) {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/analysis/${analysisId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAnalysisData(data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch analysis:", err);
+        }
       }
-    }, 80);
-  };
+    };
+    fetchAnalysis();
+  }, [hasResume]);
 
   const handleReset = () => {
     setHasResume(false);
     setResumeName('');
     localStorage.removeItem('avenir_has_resume');
     localStorage.removeItem('avenir_resume_name');
+    localStorage.removeItem('avenir_analysis_id');
   };
 
 
@@ -188,10 +169,7 @@ export default function DashboardPage({ onNavigate }) {
                 <motion.span animate={{ scale: [1, 1.25, 1] }} transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}>
                   <Sparkles size={16} className="text-[#F59E0B]" />
                 </motion.span>
-                {`Your AI Coach is ready. We've identified `}
-                <span className="font-extrabold text-base"
-                  style={{ background: 'linear-gradient(135deg,#2563EB,#7C3AED)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>3</span>
-                {` new opportunities since your last visit.`}
+                {`Your AI Coach is ready. Let's prepare you for your next interview.`}
               </motion.p>
             </motion.div>
 
@@ -204,64 +182,39 @@ export default function DashboardPage({ onNavigate }) {
                   exit={{ opacity: 0, y: -20, scale: 0.98 }}
                   transition={{ duration: 0.4 }}
                   className="mb-8 p-6 md:p-8 rounded-2xl bg-white border-2 border-dashed border-[#2563EB] shadow-[0_15px_40px_rgba(37,99,235,0.08)] relative overflow-hidden flex flex-col items-center justify-center text-center group cursor-pointer"
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onClick={() => simulateAnalysis('resume_software_engineer.pdf')}
+                  onClick={() => setActiveNav('upload')}
                 >
                   {/* Heartbeat glowing overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-[#2563EB]/5 to-[#7C3AED]/5 animate-pulse pointer-events-none" />
 
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                  />
+                  <div className="flex flex-col items-center relative z-10">
+                    {/* Animated Cloud Icon */}
+                    <motion.div
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                      className="w-16 h-16 rounded-2xl bg-[#EFF6FF] border border-[#2563EB]/10 flex items-center justify-center text-[#2563EB] mb-4 shadow-sm group-hover:scale-105 transition-transform"
+                    >
+                      <CloudUpload size={32} />
+                    </motion.div>
 
-                  {uploading ? (
-                    <div className="w-full max-w-md py-4 flex flex-col items-center relative z-10">
-                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-[#2563EB] animate-spin">
-                        <CloudUpload size={24} />
-                      </div>
-                      <h3 className="text-base font-bold text-[#111827] mb-1">Analyzing Your Resume</h3>
-                      <p className="text-xs text-[#6B7280] font-semibold mb-4">{statusText}</p>
-                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden flex">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#2563EB] to-[#7C3AED] transition-all duration-150"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-bold text-[#2563EB] mt-2">{uploadProgress}%</span>
+                    <h2 className="text-xl font-bold text-[#111827] mb-2">
+                      Upload Your Resume to Get Started
+                    </h2>
+                    <p className="text-xs md:text-sm text-[#6B7280] font-medium max-w-lg leading-relaxed mb-5">
+                      Click here to go to the Upload page. We will analyze your experience, identify critical skill gaps, and prepare tailored mock interview questions.
+                    </p>
+
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2563EB] to-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-md group-hover:shadow-lg transition-all duration-200">
+                      <span>Go to Upload</span>
+                      <ArrowRight size={13} />
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center relative z-10">
-                      {/* Animated Cloud Icon */}
-                      <motion.div
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-                        className="w-16 h-16 rounded-2xl bg-[#EFF6FF] border border-[#2563EB]/10 flex items-center justify-center text-[#2563EB] mb-4 shadow-sm group-hover:scale-105 transition-transform"
-                      >
-                        <CloudUpload size={32} />
-                      </motion.div>
-
-                      <h2 className="text-xl font-bold text-[#111827] mb-2">
-                        Upload Your Resume to Get Started
-                      </h2>
-                      <p className="text-xs md:text-sm text-[#6B7280] font-medium max-w-lg leading-relaxed mb-5">
-                        Drag and drop your PDF or DOCX file here, or click to browse. We will analyze your experience, identify critical skill gaps, and prepare tailored mock interview questions.
-                      </p>
-
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2563EB] to-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-md group-hover:shadow-lg transition-all duration-200">
-                        <span>Select File</span>
-                        <ArrowRight size={13} />
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
+            {hasResume && (
+              <>
             {/* 2. STAT CARDS */}
             <motion.div variants={itemVar} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {/* Match Score */}
@@ -275,7 +228,7 @@ export default function DashboardPage({ onNavigate }) {
                 </div>
                 <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-1">Match Score</p>
                 <p className="text-3xl font-extrabold text-[#111827]">
-                  <AnimatedCounter target={hasResume ? 78 : 0} suffix="%" />
+                  {analysisData ? <AnimatedCounter target={analysisData.atsScore || 0} suffix="%" /> : 'N/A'}
                 </p>
               </motion.div>
 
@@ -286,8 +239,12 @@ export default function DashboardPage({ onNavigate }) {
                 </div>
                 <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-1">Missing Skills</p>
                 <p className="text-3xl font-extrabold text-[#111827] flex items-baseline gap-1">
-                  <AnimatedCounter target={hasResume ? 5 : 0} />
-                  {hasResume && <span className="text-xl text-[#EF4444]">!</span>}
+                  {analysisData ? (
+                    <>
+                      <AnimatedCounter target={analysisData.missingSkills?.length || 0} />
+                      {analysisData.missingSkills?.length > 0 && <span className="text-xl text-[#EF4444]">!</span>}
+                    </>
+                  ) : 'N/A'}
                 </p>
               </motion.div>
 
@@ -298,8 +255,12 @@ export default function DashboardPage({ onNavigate }) {
                 </div>
                 <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-1">Readiness</p>
                 <p className="text-3xl font-extrabold text-[#111827] flex items-center gap-2">
-                  {hasResume ? 'High' : 'N/A'}
-                  {hasResume && <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] inline-block" />}
+                  {analysisData ? (
+                    <>
+                      {analysisData.atsScore > 75 ? 'High' : analysisData.atsScore > 50 ? 'Medium' : 'Low'}
+                      <span className={`w-2.5 h-2.5 rounded-full inline-block ${analysisData.atsScore > 75 ? 'bg-[#10B981]' : analysisData.atsScore > 50 ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`} />
+                    </>
+                  ) : 'N/A'}
                 </p>
               </motion.div>
 
@@ -310,7 +271,7 @@ export default function DashboardPage({ onNavigate }) {
                 </div>
                 <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-1">Analyzed</p>
                 <p className="text-3xl font-extrabold text-[#111827]">
-                  <AnimatedCounter target={hasResume ? 12 : 0} />
+                  {hasResume ? 1 : 'N/A'}
                 </p>
               </motion.div>
             </motion.div>
@@ -335,36 +296,20 @@ export default function DashboardPage({ onNavigate }) {
                   <motion.div variants={containerVar} initial="hidden" animate="visible" className="space-y-4">
                     {hasResume ? (
                       <>
-                        <motion.div variants={itemVar} className="flex items-start gap-3.5 pb-4 border-b border-[#F3F4F6]">
+                        <motion.div variants={itemVar} className="flex items-start gap-3.5 pb-4">
                           <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center shrink-0"><FileText size={17} className="text-[#2563EB]" /></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-[#111827] truncate">Analyzed "{resumeName}"</p>
-                            <p className="text-xs text-[#6B7280] mt-0.5">Applied to: Apple Inc. • Just now</p>
+                            <p className="text-xs text-[#6B7280] mt-0.5">Target Role: {analysisData?.jobTitle || 'N/A'} • Recently</p>
                           </div>
-                          <span className="text-sm font-bold text-[#2563EB] shrink-0">82% Match</span>
-                        </motion.div>
-                        <motion.div variants={itemVar} className="flex items-start gap-3.5 pb-4 border-b border-[#F3F4F6]">
-                          <div className="w-9 h-9 rounded-xl bg-[#F5F3FF] flex items-center justify-center shrink-0"><Mic size={17} className="text-[#7C3AED]" /></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-[#111827]">Completed Mock Interview session</p>
-                            <p className="text-xs text-[#6B7280] mt-0.5">Topic: Behavioral Questions • Yesterday</p>
-                          </div>
-                          <span className="text-sm font-bold text-[#7C3AED] shrink-0">9/10 Score</span>
-                        </motion.div>
-                        <motion.div variants={itemVar} className="flex items-start gap-3.5">
-                          <div className="w-9 h-9 rounded-xl bg-[#F3F4F6] flex items-center justify-center shrink-0"><Edit size={17} className="text-[#6B7280]" /></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-[#111827]">Updated Resume Bullet Points</p>
-                            <p className="text-xs text-[#6B7280] mt-0.5">Focus: Leadership Skills • 2 days ago</p>
-                          </div>
-                          <KebabMenu />
+                          <span className="text-sm font-bold text-[#2563EB] shrink-0">{analysisData?.atsScore || 0}% Match</span>
                         </motion.div>
                       </>
                     ) : (
-                      <div className="text-center py-6">
-                        <p className="text-sm text-[#6B7280] font-medium">No activity recorded yet.</p>
-                        <p className="text-xs text-[#9CA3AF] mt-1">Upload your resume to perform your first gap analysis.</p>
-                      </div>
+                        <div className="flex flex-col items-center justify-center py-6">
+                          <p className="text-sm text-[#6B7280] font-medium">No activity recorded yet.</p>
+                          <button onClick={() => setActiveNav('upload')} className="text-xs font-bold text-[#2563EB] mt-2 hover:underline">Go upload a resume to start</button>
+                        </div>
                     )}
                   </motion.div>
                 </motion.div>
@@ -388,15 +333,15 @@ export default function DashboardPage({ onNavigate }) {
                         <p className="text-[10px] text-[#9CA3AF] mt-0.5">Required to unlock analysis</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-red-500 bg-red-50">● Missing</span>
-                          <button onClick={() => simulateAnalysis('resume_software_engineer.pdf')} className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer">Upload</button>
+                          <button onClick={() => setActiveNav('upload')} className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer">Upload</button>
                         </div>
                       </>
                     )}
                   </div>
                   <div className="bg-white rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.08)] p-5">
-                    <div className="flex items-center gap-2 mb-3"><Briefcase size={15} className="text-[#7C3AED]" /><h3 className="text-sm font-bold text-[#111827]">Job Description</h3></div>
-                    <p className="text-xs font-semibold text-[#111827]">Senior AI Product Lead</p>
-                    <p className="text-[10px] text-[#6B7280] mt-0.5">Company: OpenAI</p>
+                    <div className="flex items-center gap-2 mb-3"><Briefcase size={15} className="text-[#7C3AED]" /><h3 className="text-sm font-bold text-[#111827]">Job Target</h3></div>
+                    <p className="text-xs font-semibold text-[#111827]">{analysisData?.jobTitle || 'Senior Role'}</p>
+                    <p className="text-[10px] text-[#6B7280] mt-0.5">Company: {analysisData?.company || 'Target Company'}</p>
                     <div className="flex items-center justify-between mt-3">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF]">● Linked</span>
                       <button className="text-[11px] font-bold text-[#7C3AED] hover:underline cursor-pointer">Change Job</button>
@@ -492,8 +437,8 @@ export default function DashboardPage({ onNavigate }) {
                     </div>
                   )}
                   <h2 className="text-base font-bold text-[#111827] mb-5 self-start">Career Goal</h2>
-                  <CircularProgress percentage={hasResume ? 70 : 0} />
-                  <p className="mt-4 text-sm text-[#6B7280] font-medium">Targeting: Senior AI Product Lead</p>
+                  <CircularProgress percentage={analysisData?.atsScore || 0} />
+                  <p className="mt-4 text-sm text-[#6B7280] font-medium text-center">Targeting: {analysisData?.jobTitle || 'Target Role'}</p>
                 </motion.div>
 
                 {/* Quick Actions */}
@@ -508,7 +453,7 @@ export default function DashboardPage({ onNavigate }) {
                     ].map(({ icon: Icon, label, iconColor, iconBg }) => (
                       <motion.button key={label}
                         onClick={() => {
-                          if (label.includes('Upload')) simulateAnalysis('resume_software_engineer.pdf');
+                          if (label.includes('Upload')) setActiveNav('upload');
                         }}
                         whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(37,99,235,0.12)' }} whileTap={{ scale: 0.97 }}
                         className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm cursor-pointer group">
@@ -560,8 +505,8 @@ export default function DashboardPage({ onNavigate }) {
                 </motion.div>
               </div>
             </div>
-
-
+            </>
+            )}
 
             {/* FOOTER */}
             <footer className="border-t border-[#E5E7EB] pt-5 pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

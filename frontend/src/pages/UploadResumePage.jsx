@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Sparkles,
+  ArrowRight
 } from 'lucide-react';
 
 export default function UploadResumePage({ onNext }) {
@@ -86,7 +87,7 @@ export default function UploadResumePage({ onNext }) {
       } else if (rejection.errors[0].code === 'file-too-large') {
         setError({
           type: 'size',
-          message: 'File size exceeds 10MB limit. Please upload a smaller file.',
+          message: 'File size exceeds 5MB limit. Please upload a smaller file.',
         });
       }
       return;
@@ -149,9 +150,8 @@ export default function UploadResumePage({ onNext }) {
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 5 * 1024 * 1024, // 5MB
     multiple: false,
   });
 
@@ -342,11 +342,11 @@ export default function UploadResumePage({ onNext }) {
                       <div className="flex gap-4 mt-8">
                         <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider bg-[#F3F4F6] px-2.5 py-1 rounded-full">
                           <CheckCircle2 size={12} className="text-[#10B981]" />
-                          PDF, DOCX
+                          PDF Only
                         </span>
                         <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-wider bg-[#F3F4F6] px-2.5 py-1 rounded-full">
                           <CheckCircle2 size={12} className="text-[#10B981]" />
-                          Max size 10MB
+                          Max size 5MB
                         </span>
                       </div>
                     </motion.div>
@@ -583,8 +583,8 @@ export default function UploadResumePage({ onNext }) {
       {/* FOOTER */}
       <footer className="border-t border-[#E5E7EB] pt-5 pb-6 mt-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <span className="text-sm font-extrabold text-[#2563EB]">ResumeAI Analyzer</span>
-          <p className="text-xs text-[#6B7280] mt-0.5">© 2024 ResumeAI Analyzer. All rights reserved.</p>
+          <span className="text-sm font-extrabold text-[#2563EB]">Avenir AI</span>
+          <p className="text-xs text-[#6B7280] mt-0.5">&copy; {new Date().getFullYear()} Avenir AI. All rights reserved.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-[#6B7280]">
           {['Sitemap', 'Privacy Policy', 'Terms of Service', 'Support'].map((link, i) => (

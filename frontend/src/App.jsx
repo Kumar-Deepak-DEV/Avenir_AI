@@ -4,12 +4,13 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
-
-
 import './App.css';
 
+
 export default function App() {
-  const [view, setView] = useState('landing');
+  const [view, setView] = useState(() => {
+    return localStorage.getItem('token') ? 'dashboard' : 'landing';
+  });
 
   // Page switcher navigation helper
   const handleNavigate = (targetView) => {
