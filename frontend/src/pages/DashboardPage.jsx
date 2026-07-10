@@ -62,6 +62,7 @@ export default function DashboardPage({ onNavigate }) {
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('general');
 
   // Resume upload states
   const [hasResume, setHasResume] = useState(() => localStorage.getItem('avenir_has_resume') === 'true');
@@ -188,25 +189,7 @@ export default function DashboardPage({ onNavigate }) {
             Settings
             {activeNav === 'settings' && <motion.div layoutId="navPillBottom" className="ml-auto w-1.5 h-5 rounded-full" style={{ background: 'linear-gradient(to bottom,#2563EB,#7C3AED)' }} />}
           </motion.button>
-          <motion.button whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }} onClick={() => { setActiveNav('profile'); setSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${activeNav === 'profile' ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold' : 'text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]'}`}>
-            <User size={18} className={activeNav === 'profile' ? 'text-[#2563EB]' : 'text-[#9CA3AF]'} />
-            Profile
-            {activeNav === 'profile' && <motion.div layoutId="navPillBottom" className="ml-auto w-1.5 h-5 rounded-full" style={{ background: 'linear-gradient(to bottom,#2563EB,#7C3AED)' }} />}
-          </motion.button>
         </nav>
-
-        <div className="px-4 pb-6 pt-2">
-          <div className="bg-[#EEF2FF] rounded-xl p-4 border border-[#E0E7FF]">
-            <p className="text-[10px] font-bold text-[#4F46E5] uppercase tracking-widest mb-1.5">Pro Plan</p>
-            <p className="text-xs text-[#4B5563] font-medium leading-relaxed mb-4">
-              Unlock advanced AI analysis and unlimited resumes.
-            </p>
-            <button className="w-full py-2 bg-[#0051C9] hover:bg-[#0042A5] text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer">
-              Upgrade to Pro
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* RIGHT AREA */}
@@ -238,7 +221,7 @@ export default function DashboardPage({ onNavigate }) {
               </AnimatePresence>
             </motion.button>
             <div className="w-px h-7 bg-[#E5E7EB] mx-1" />
-            <ProfileDropdown onNavigate={onNavigate} />
+            <ProfileDropdown onNavigate={onNavigate} onDashboardNav={(nav, tab) => { setActiveNav(nav); if (tab) setSettingsTab(tab); }} />
           </div>
         </header>
 
@@ -256,9 +239,7 @@ export default function DashboardPage({ onNavigate }) {
             ) : activeNav === 'interview' ? (
               <MockInterviewPage />
             ) : activeNav === 'settings' ? (
-              <SettingsPage initialTab="general" />
-            ) : activeNav === 'profile' ? (
-              <SettingsPage initialTab="profile" />
+              <SettingsPage initialTab={settingsTab} />
             ) : activeNav === 'history' ? (
               <HistoryPage />
             ) : (
