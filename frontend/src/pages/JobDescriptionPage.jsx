@@ -718,8 +718,8 @@ export default function JobDescriptionPage({ onNext }) {
         {/* ── Footer ── */}
         <footer className="border-t border-[#E5E7EB] pt-6 pb-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B7280] mt-8">
           <div>
-            <span className="font-extrabold text-[#2563EB] text-sm">ResumeAI</span>
-            <p className="mt-0.5">© 2024 ResumeAI Analyzer. All rights reserved.</p>
+            <span className="font-extrabold text-[#2563EB] text-sm">Avenir AI</span>
+            <p className="mt-0.5">&copy; {new Date().getFullYear()} Avenir AI. All rights reserved.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {['Sitemap', 'Privacy Policy', 'Terms of Service', 'Support'].map((link, i) => (
