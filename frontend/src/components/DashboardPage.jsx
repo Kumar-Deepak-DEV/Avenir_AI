@@ -434,7 +434,7 @@ export default function DashboardPage({ onNavigate }) {
                   className="mb-8 p-6 md:p-8 rounded-2xl bg-white border-2 border-dashed border-[#2563EB] shadow-[0_15px_40px_rgba(37,99,235,0.08)] relative overflow-hidden flex flex-col items-center justify-center text-center group cursor-pointer"
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => simulateAnalysis('resume_software_engineer.pdf')}
                 >
                   {/* Heartbeat glowing overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-[#2563EB]/5 to-[#7C3AED]/5 animate-pulse pointer-events-none" />
@@ -616,7 +616,7 @@ export default function DashboardPage({ onNavigate }) {
                         <p className="text-[10px] text-[#9CA3AF] mt-0.5">Required to unlock analysis</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-red-500 bg-red-50">● Missing</span>
-                          <button onClick={() => fileInputRef.current?.click()} className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer">Upload</button>
+                          <button onClick={() => simulateAnalysis('resume_software_engineer.pdf')} className="text-[11px] font-bold text-[#2563EB] hover:underline cursor-pointer">Upload</button>
                         </div>
                       </>
                     )}
@@ -736,7 +736,7 @@ export default function DashboardPage({ onNavigate }) {
                     ].map(({ icon: Icon, label, iconColor, iconBg }) => (
                       <motion.button key={label}
                         onClick={() => {
-                          if (label.includes('Upload')) fileInputRef.current?.click();
+                          if (label.includes('Upload')) simulateAnalysis('resume_software_engineer.pdf');
                         }}
                         whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(37,99,235,0.12)' }} whileTap={{ scale: 0.97 }}
                         className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm cursor-pointer group">
