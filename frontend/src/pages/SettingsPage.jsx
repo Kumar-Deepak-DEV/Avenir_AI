@@ -302,12 +302,7 @@ const SettingsPage = ({ initialTab = 'profile' }) => {
     { id: 'api', label: 'API Management', icon: Code },
   ];
 
-  const notificationItems = [
-    { key: 'emailNotifications', title: 'Email Notifications', desc: 'Get updates about new job matches and analysis results.' },
-    { key: 'interviewReminders', title: 'Interview Reminders', desc: 'Receive reminders before scheduled mock interviews.' },
-    { key: 'weeklyProgressReport', title: 'Weekly Progress Report', desc: 'A summary of your improvement sent every Monday.' },
-    { key: 'marketingEmails', title: 'Marketing Emails', desc: 'Tips, new features, and promotional offers.' },
-  ];
+
 
   return (
     <div className="animate-in fade-in duration-500 pb-10">
@@ -527,33 +522,7 @@ const SettingsPage = ({ initialTab = 'profile' }) => {
                 </div>
               </div>
 
-              {/* Notifications */}
-              <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-sm p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-9 h-9 rounded-xl bg-[#FEF3C7] flex items-center justify-center">
-                    <Bell size={18} className="text-[#D97706]" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-[#111827]">Notifications</h2>
-                    <p className="text-xs text-[#6B7280]">Configure how and when you receive alerts.</p>
-                  </div>
-                </div>
 
-                <div className="space-y-5">
-                  {notificationItems.map((item, i) => (
-                    <div key={item.key}>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-[#111827]">{item.title}</p>
-                          <p className="text-xs text-[#6B7280] mt-0.5">{item.desc}</p>
-                        </div>
-                        <Toggle checked={settings[item.key]} onChange={(v) => updateSetting(item.key, v)} />
-                      </div>
-                      {i < notificationItems.length - 1 && <hr className="border-[#F3F4F6] mt-5" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               {/* Save */}
               <div className="flex justify-end">
