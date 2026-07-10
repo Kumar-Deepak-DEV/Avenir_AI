@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import UploadResumePage from './UploadResumePage';
 import JobDescriptionPage from './JobDescriptionPage';
+import GapAnalysisPage from './GapAnalysisPage';
 
 /* ─── Mock Data ─── */
 const lineData = [
@@ -403,7 +404,7 @@ export default function DashboardPage({ onNavigate }) {
         {/* MAIN SCROLLABLE */}
         <main id="dash-scroll" className="flex-1 overflow-y-auto px-5 lg:px-10 py-8">
           <motion.div variants={containerVar} initial="hidden" animate="visible" className="max-w-[1400px] mx-auto">
-            {activeNav === 'upload' ? <UploadResumePage /> : activeNav === 'job' ? <JobDescriptionPage /> : <>
+            {activeNav === 'upload' ? <UploadResumePage /> : activeNav === 'job' ? <JobDescriptionPage /> : activeNav === 'gap' ? <GapAnalysisPage /> : <>
                 {/* 1. WELCOME */}
                 <motion.div variants={itemVar} className="mb-8">
                   <h1 className="text-3xl lg:text-[2.2rem] font-extrabold text-[#111827] tracking-tight">
