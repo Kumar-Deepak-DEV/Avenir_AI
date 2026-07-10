@@ -80,8 +80,7 @@ export default function SignupPage({ onNavigate }) {
     // Simulate API registration
     setTimeout(() => {
       setLoading(false);
-      alert(`Account created successfully for: ${name}`);
-      onNavigate('login');
+      onNavigate('dashboard');
     }, 1500);
   };
 

@@ -31,8 +31,7 @@ export default function LoginPage({ onNavigate }) {
     // Simulate API request
     setTimeout(() => {
       setLoading(false);
-      alert(`Logged in successfully with email: ${email}`);
-      onNavigate('landing');
+      onNavigate('dashboard');
     }, 1500);
   };
 
