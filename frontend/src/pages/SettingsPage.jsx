@@ -108,6 +108,8 @@ function ProfileTab({ showToast }) {
   const handleSave = () => {
     saveProfile(draft);
     setProfile(draft);
+    // Notify same-tab listeners (e.g. ProfileDropdown in sidebar)
+    window.dispatchEvent(new StorageEvent('storage', { key: 'avenir_profile' }));
     showToast();
   };
 
