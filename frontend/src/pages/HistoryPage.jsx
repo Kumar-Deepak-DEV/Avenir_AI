@@ -27,34 +27,18 @@ import {
   Star,
   Check,
   ChevronDown,
+  MessageSquare,
+  User
 } from 'lucide-react';
-
-/* ─── Mock Data ─── */
-const initialAnalyses = [
-  { id: '1', role: 'Senior Product Manager', company: 'Google Cloud', category: 'PRODUCT MANAGEMENT', score: 88, date: 'Oct 24, 2023', version: 'v2.4', active: true },
-  { id: '2', role: 'Full Stack Architect', company: 'Stripe', category: 'ENGINEERING', score: 72, date: 'Oct 12, 2023', version: 'v2.1', active: false },
-  { id: '3', role: 'Senior UI Designer', company: 'Airbnb', category: 'DESIGN', score: 94, date: 'Sep 28, 2023', version: 'v1.8', active: false },
-];
-
-const initialSessions = [
-  { id: '1', title: 'General Behavioral Interview', duration: '18m 42s', date: 'Oct 22, 2023', score: 84, confidence: 'HIGH' },
-  { id: '2', title: 'Frontend Engineering Mock', duration: '12m 15s', date: 'Oct 18, 2023', score: 76, confidence: 'MEDIUM' },
-];
-
-const initialVersions = [
-  { id: '1', name: 'Resume_v2.4_final.pdf', date: '2 days ago', active: true },
-  { id: '2', name: 'Resume_v2.3_pm_focus.pdf', date: '12 days ago', active: false },
-  { id: '3', name: 'Resume_v1.0_baseline.pdf', date: '1 month ago', active: false },
-];
 
 export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [viewType, setViewType] = useState('card'); // card | table | timeline
   
   // Data lists
-  const [analyses, setAnalyses] = useState(initialAnalyses);
-  const [sessions, setSessions] = useState(initialSessions);
-  const [versions, setVersions] = useState(initialVersions);
+  const [analyses, setAnalyses] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [versions, setVersions] = useState([]);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,9 +59,83 @@ export default function HistoryPage() {
   // Sorting / Filter Options Dropdowns
   const [activeFilterDropdown, setActiveFilterDropdown] = useState(null); // 'date' | 'role' | 'score'
 
+  // Format date helper
+  const formatDate = (isoString) => {
+    if (!isoString) return 'Unknown Date';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getCategoryFromTitle = (title) => {
+    if (!title) return 'GENERAL';
+    const t = title.toLowerCase();
+    if (t.includes('engineer') || t.includes('developer') || t.includes('coder') || t.includes('software')) return 'ENGINEERING';
+    if (t.includes('product') || t.includes('manager') || t.includes('pm')) return 'PRODUCT MANAGEMENT';
+    if (t.includes('design') || t.includes('ui') || t.includes('ux')) return 'DESIGN';
+    return 'GENERAL';
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/history`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Map analyses
+        const mappedAnalyses = data.analyses.map(a => ({
+          id: a._id,
+          role: a.jobTitle,
+          company: a.company || 'Unknown Company',
+          category: getCategoryFromTitle(a.jobTitle),
+          score: a.atsScore || 0,
+          date: formatDate(a.createdAt),
+          version: 'v1.0',
+          active: false
+        }));
+
+        // Map sessions
+        const mappedSessions = data.sessions.map(s => {
+          return {
+            id: s._id,
+            title: `Mock Interview Session`,
+            messageCount: s.messages ? s.messages.length : 0,
+            messages: s.messages || [],
+            date: formatDate(s.createdAt),
+            score: s.score || 0,
+            confidence: (s.score && s.score >= 80) ? 'HIGH' : 'MEDIUM'
+          };
+        });
+
+        // Map versions
+        const mappedVersions = data.versions.map((v, idx) => ({
+          id: v._id,
+          name: v.originalFileName || 'Resume.pdf',
+          date: formatDate(v.createdAt),
+          active: idx === 0 // Most recent is active
+        }));
+
+        setAnalyses(mappedAnalyses);
+        setSessions(mappedSessions);
+        setVersions(mappedVersions);
+      }
+    } catch (error) {
+      console.error('Failed to fetch history', error);
+      triggerToast('Failed to load history.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(timer);
+    fetchHistory();
   }, []);
 
   // Trigger auto-dismiss toast
@@ -98,13 +156,13 @@ export default function HistoryPage() {
 
     if (deleteTarget.type === 'analysis') {
       setAnalyses(analyses.filter((a) => a.id !== deleteTarget.id));
-      triggerToast('Analysis deleted successfully!', 'success');
+      triggerToast('Analysis hidden successfully!', 'success');
     } else if (deleteTarget.type === 'session') {
       setSessions(sessions.filter((s) => s.id !== deleteTarget.id));
-      triggerToast('Interview session deleted successfully!', 'success');
+      triggerToast('Interview session hidden successfully!', 'success');
     } else if (deleteTarget.type === 'version') {
       setVersions(versions.filter((v) => v.id !== deleteTarget.id));
-      triggerToast('Resume version deleted successfully!', 'success');
+      triggerToast('Resume version hidden successfully!', 'success');
     }
 
     setShowDeleteModal(false);
@@ -126,14 +184,7 @@ export default function HistoryPage() {
 
   const handleUploadNewVersion = (e) => {
     e.preventDefault();
-    const newVer = {
-      id: String(versions.length + 1),
-      name: `Resume_v2.5_uploaded.pdf`,
-      date: 'Just now',
-      active: true,
-    };
-    setVersions([newVer, ...versions.map(v => ({ ...v, active: false }))]);
-    triggerToast('New version uploaded and set as active!');
+    triggerToast('Please upload a new resume via the Dashboard.', 'error');
   };
 
   // Toggle audio player simulation
@@ -206,8 +257,8 @@ export default function HistoryPage() {
             exit={{ opacity: 0, x: 50 }}
             className="fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3.5 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl"
           >
-            <div className="w-6 h-6 rounded-full bg-[#ECFDF5] flex items-center justify-center">
-              <Check size={14} className="text-[#10B981]" />
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-[#ECFDF5] text-[#10B981]'}`}>
+              {toast.type === 'error' ? <X size={14} /> : <Check size={14} />}
             </div>
             <div>
               <p className="text-xs font-bold text-[#111827]">{toast.message}</p>
@@ -239,7 +290,7 @@ export default function HistoryPage() {
               <Trash2 className="w-12 h-12 text-[#EF4444] mx-auto mb-4" />
               <h3 className="text-base font-extrabold text-[#111827] mb-2">Are you sure?</h3>
               <p className="text-xs text-[#6B7280] mb-6 leading-relaxed">
-                This action cannot be undone. All report metrics and data for this item will be permanently removed.
+                This action will hide this item from your dashboard.
               </p>
               <div className="flex gap-3">
                 <button
@@ -252,7 +303,7 @@ export default function HistoryPage() {
                   onClick={handleDeleteConfirm}
                   className="flex-1 py-2.5 bg-[#EF4444] hover:bg-red-600 text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm hover:shadow-red-200"
                 >
-                  Delete
+                  Hide
                 </button>
               </div>
             </motion.div>
@@ -291,7 +342,7 @@ export default function HistoryPage() {
                   <div>
                     <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest block mb-2.5">Category</label>
                     <div className="space-y-2">
-                      {['All', 'PRODUCT MANAGEMENT', 'ENGINEERING', 'DESIGN'].map((cat) => (
+                      {['All', 'PRODUCT MANAGEMENT', 'ENGINEERING', 'DESIGN', 'GENERAL'].map((cat) => (
                         <label key={cat} className="flex items-center gap-2 text-xs font-medium text-[#111827] cursor-pointer">
                           <input
                             type="radio"
@@ -367,7 +418,7 @@ export default function HistoryPage() {
                 onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'date' ? null : 'date')}
                 className="px-4 py-2 bg-white border border-[#E5E7EB] hover:bg-[#F8FAFC] rounded-full text-xs font-bold text-[#111827] flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
-                <span>Date: Last 30 Days</span>
+                <span>Date: All Time</span>
                 <ChevronDown size={14} />
               </button>
               {activeFilterDropdown === 'date' && (
@@ -398,7 +449,7 @@ export default function HistoryPage() {
               </button>
               {activeFilterDropdown === 'role' && (
                 <div className="absolute right-0 mt-2 z-30 w-44 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-1.5 flex flex-col gap-1">
-                  {['All', 'PRODUCT MANAGEMENT', 'ENGINEERING', 'DESIGN'].map((role) => (
+                  {['All', 'PRODUCT MANAGEMENT', 'ENGINEERING', 'DESIGN', 'GENERAL'].map((role) => (
                     <button
                       key={role}
                       onClick={() => {
@@ -523,259 +574,257 @@ export default function HistoryPage() {
             <span className="text-[10px] font-extrabold text-[#6B7280] uppercase tracking-widest">Recent Resume Analyses</span>
           </div>
 
-          <AnimatePresence mode="wait">
-            
-            {/* A. CARD VIEW */}
-            {viewType === 'card' && (
-              <motion.div
-                key="card-view"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-6"
-              >
-                {filteredAnalyses.map((item, idx) => (
-                  <motion.div
-                    key={item.id}
-                    variants={itemVar}
-                    whileHover={cardHover}
-                    className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all relative flex flex-col justify-between"
-                  >
-                    <div>
-                      {/* Top Row */}
-                      <div className="flex items-start justify-between mb-4">
-                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider
-                          ${item.category === 'PRODUCT MANAGEMENT' ? 'bg-[#F5F3FF] text-[#7C3AED]' :
-                            item.category === 'ENGINEERING' ? 'bg-[#EFF6FF] text-[#2563EB]' :
-                            'bg-[#EEF2FF] text-[#4F46E5]'}
-                        `}>
-                          {item.category}
-                        </span>
-
-                        <div className="text-right">
-                          <span className={`text-2xl font-extrabold block
-                            ${item.score >= 85 ? 'text-[#2563EB]' : item.score >= 70 ? 'text-[#7C3AED]' : 'text-[#EF4444]'}
+          {filteredAnalyses.length === 0 ? (
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 text-center text-[#6B7280]">
+              <p className="text-sm font-medium">No analyses found.</p>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {/* A. CARD VIEW */}
+              {viewType === 'card' && (
+                <motion.div
+                  key="card-view"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                >
+                  {filteredAnalyses.map((item, idx) => (
+                    <motion.div
+                      key={item.id}
+                      variants={itemVar}
+                      whileHover={cardHover}
+                      className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all relative flex flex-col justify-between"
+                    >
+                      <div>
+                        {/* Top Row */}
+                        <div className="flex items-start justify-between mb-4">
+                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider
+                            ${item.category === 'PRODUCT MANAGEMENT' ? 'bg-[#F5F3FF] text-[#7C3AED]' :
+                              item.category === 'ENGINEERING' ? 'bg-[#EFF6FF] text-[#2563EB]' :
+                              'bg-[#EEF2FF] text-[#4F46E5]'}
                           `}>
-                            {item.score}%
+                            {item.category}
                           </span>
-                          <span className="text-[8px] font-extrabold text-[#9CA3AF] uppercase tracking-wider">Match Score</span>
+
+                          <div className="text-right">
+                            <span className={`text-2xl font-extrabold block
+                              ${item.score >= 85 ? 'text-[#2563EB]' : item.score >= 70 ? 'text-[#7C3AED]' : 'text-[#EF4444]'}
+                            `}>
+                              {item.score}%
+                            </span>
+                            <span className="text-[8px] font-extrabold text-[#9CA3AF] uppercase tracking-wider">Match Score</span>
+                          </div>
+                        </div>
+
+                        <h3 className="text-sm font-extrabold text-[#111827]">{item.role}</h3>
+                        <p className="text-xs text-[#6B7280] mt-1">Applied at: {item.company}</p>
+
+                        {/* Progress Bar */}
+                        <div className="mt-4 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-[#2563EB] to-[#7C3AED]"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.score}%` }}
+                            transition={{ duration: 1.1, ease: 'easeOut', delay: idx * 0.1 }}
+                          />
                         </div>
                       </div>
 
-                      <h3 className="text-sm font-extrabold text-[#111827]">{item.role}</h3>
-                      <p className="text-xs text-[#6B7280] mt-1">Applied at: {item.company}</p>
+                      <div className="mt-6">
+                        {/* Meta information */}
+                        <div className="flex items-center gap-3 text-[10px] text-[#9CA3AF] font-medium mb-4">
+                          <span className="flex items-center gap-1"><Calendar size={12} /> {item.date}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1"><History size={12} /> {item.version}</span>
+                        </div>
 
-                      {/* Progress Bar */}
-                      <div className="mt-4 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-gradient-to-r from-[#2563EB] to-[#7C3AED]"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${item.score}%` }}
-                          transition={{ duration: 1.1, ease: 'easeOut', delay: idx * 0.1 }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-6">
-                      {/* Meta information */}
-                      <div className="flex items-center gap-3 text-[10px] text-[#9CA3AF] font-medium mb-4">
-                        <span className="flex items-center gap-1"><Calendar size={12} /> {item.date}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1"><History size={12} /> {item.version}</span>
-                      </div>
-
-                      {/* Buttons */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => alert(`Opening report for ${item.role}`)}
-                          className="flex-1 py-2 bg-gradient-to-r from-[#2563EB] to-[#7C3AED] hover:from-[#3B82F6] hover:to-[#8B5CF6] text-white text-xs font-bold rounded-xl cursor-pointer"
-                        >
-                          View Report
-                        </button>
-                        <button
-                          onClick={() => triggerToast(`Re-analyzing ${item.role}...`)}
-                          className="p-2 border border-[#E5E7EB] hover:bg-[#F8FAFC] rounded-xl text-[#6B7280] cursor-pointer"
-                          title="Re-analyze"
-                        >
-                          <RefreshCw size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Kebab action dropdown */}
-                    <div className="absolute top-4 right-4">
-                      <button
-                        onClick={() => setActiveKebab(activeKebab === item.id ? null : item.id)}
-                        className="p-1 rounded-full hover:bg-gray-100 text-[#9CA3AF] hover:text-[#111827] cursor-pointer"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-
-                      <AnimatePresence>
-                        {activeKebab === item.id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="absolute right-0 mt-1 w-36 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-1 z-20 flex flex-col"
+                        {/* Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => triggerToast(`Report viewing coming soon!`, 'success')}
+                            className="flex-1 py-2 bg-gradient-to-r from-[#2563EB] to-[#7C3AED] hover:from-[#3B82F6] hover:to-[#8B5CF6] text-white text-xs font-bold rounded-xl cursor-pointer"
                           >
+                            View Report
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Kebab action dropdown */}
+                      <div className="absolute top-4 right-4">
+                        <button
+                          onClick={() => setActiveKebab(activeKebab === item.id ? null : item.id)}
+                          className="p-1 rounded-full hover:bg-gray-100 text-[#9CA3AF] hover:text-[#111827] cursor-pointer"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+
+                        <AnimatePresence>
+                          {activeKebab === item.id && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              className="absolute right-0 mt-1 w-36 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-1 z-20 flex flex-col"
+                            >
+                              <button
+                                onClick={() => handleExportPDF(item.role)}
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] rounded-lg text-left"
+                              >
+                                <Download size={12} /> Export PDF
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeleteTarget({ id: item.id, type: 'analysis' });
+                                  setShowDeleteModal(true);
+                                }}
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#EF4444] hover:bg-red-50 rounded-lg text-left"
+                              >
+                                <Trash2 size={12} /> Hide
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+
+              {/* B. TABLE VIEW */}
+              {viewType === 'table' && (
+                <motion.div
+                  key="table-view"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm"
+                >
+                  <table className="w-full text-left border-collapse text-xs font-medium text-[#111827]">
+                    <thead>
+                      <tr className="bg-[#F8FAFC] border-b border-[#E5E7EB] text-[#6B7280]">
+                        <th className="px-6 py-3.5">Role</th>
+                        <th className="px-6 py-3.5">Company</th>
+                        <th className="px-6 py-3.5">Category</th>
+                        <th className="px-6 py-3.5">Match Score</th>
+                        <th className="px-6 py-3.5">Date</th>
+                        <th className="px-6 py-3.5">Version</th>
+                        <th className="px-6 py-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAnalyses.map((item) => (
+                        <tr key={item.id} className="border-b border-[#F3F4F6] hover:bg-[#F8FAFC]/50 transition-colors">
+                          <td className="px-6 py-4 font-bold">{item.role}</td>
+                          <td className="px-6 py-4 text-[#6B7280]">{item.company}</td>
+                          <td className="px-6 py-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wider">{item.category}</span>
+                          </td>
+                          <td className="px-6 py-4 font-bold text-[#2563EB]">{item.score}%</td>
+                          <td className="px-6 py-4 text-[#6B7280]">{item.date}</td>
+                          <td className="px-6 py-4 text-[#6B7280]">{item.version}</td>
+                          <td className="px-6 py-4 text-right flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => triggerToast(`Report viewing coming soon!`, 'success')}
+                              className="p-1.5 hover:bg-[#EFF6FF] text-[#2563EB] rounded"
+                              title="View report"
+                            >
+                              <FileText size={14} />
+                            </button>
                             <button
                               onClick={() => handleExportPDF(item.role)}
-                              className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] rounded-lg text-left"
+                              className="p-1.5 hover:bg-[#F5F3FF] text-[#7C3AED] rounded"
+                              title="Export PDF"
                             >
-                              <Download size={12} /> Export PDF
+                              <Download size={14} />
                             </button>
                             <button
                               onClick={() => {
                                 setDeleteTarget({ id: item.id, type: 'analysis' });
                                 setShowDeleteModal(true);
                               }}
-                              className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#EF4444] hover:bg-red-50 rounded-lg text-left"
+                              className="p-1.5 hover:bg-red-50 text-[#EF4444] rounded"
+                              title="Hide record"
                             >
-                              <Trash2 size={12} /> Delete
+                              <Trash2 size={14} />
                             </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </motion.div>
+              )}
 
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-
-            {/* B. TABLE VIEW */}
-            {viewType === 'table' && (
-              <motion.div
-                key="table-view"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm"
-              >
-                <table className="w-full text-left border-collapse text-xs font-medium text-[#111827]">
-                  <thead>
-                    <tr className="bg-[#F8FAFC] border-b border-[#E5E7EB] text-[#6B7280]">
-                      <th className="px-6 py-3.5">Role</th>
-                      <th className="px-6 py-3.5">Company</th>
-                      <th className="px-6 py-3.5">Category</th>
-                      <th className="px-6 py-3.5">Match Score</th>
-                      <th className="px-6 py-3.5">Date</th>
-                      <th className="px-6 py-3.5">Version</th>
-                      <th className="px-6 py-3.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAnalyses.map((item) => (
-                      <tr key={item.id} className="border-b border-[#F3F4F6] hover:bg-[#F8FAFC]/50 transition-colors">
-                        <td className="px-6 py-4 font-bold">{item.role}</td>
-                        <td className="px-6 py-4 text-[#6B7280]">{item.company}</td>
-                        <td className="px-6 py-4">
-                          <span className="text-[10px] font-bold uppercase tracking-wider">{item.category}</span>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-[#2563EB]">{item.score}%</td>
-                        <td className="px-6 py-4 text-[#6B7280]">{item.date}</td>
-                        <td className="px-6 py-4 text-[#6B7280]">{item.version}</td>
-                        <td className="px-6 py-4 text-right flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => alert(`Opening report for ${item.role}`)}
-                            className="p-1.5 hover:bg-[#EFF6FF] text-[#2563EB] rounded"
-                            title="View report"
-                          >
-                            <FileText size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleExportPDF(item.role)}
-                            className="p-1.5 hover:bg-[#F5F3FF] text-[#7C3AED] rounded"
-                            title="Export PDF"
-                          >
-                            <Download size={14} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeleteTarget({ id: item.id, type: 'analysis' });
-                              setShowDeleteModal(true);
-                            }}
-                            className="p-1.5 hover:bg-red-50 text-[#EF4444] rounded"
-                            title="Delete record"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </motion.div>
-            )}
-
-            {/* C. TIMELINE VIEW */}
-            {viewType === 'timeline' && (
-              <motion.div
-                key="timeline-view"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="relative border-l border-[#E5E7EB] ml-32 pl-8 space-y-6"
-              >
-                {filteredAnalyses.map((item, idx) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: idx * 0.08 }}
-                    className="relative"
-                  >
-                    {/* Date label left axis */}
-                    <div className="absolute -left-40 top-1 text-right w-28 text-[10px] font-bold text-[#9CA3AF] uppercase">
-                      {item.date}
-                    </div>
-
-                    {/* Bullet */}
-                    <span className={`absolute -left-[39px] w-3.5 h-3.5 rounded-full border-2 bg-white flex items-center justify-center
-                      ${item.score >= 85 ? 'border-[#2563EB]' : 'border-[#7C3AED]'}
-                    `}>
-                      <span className={`w-1.5 h-1.5 rounded-full
-                        ${item.score >= 85 ? 'bg-[#2563EB]' : 'bg-[#7C3AED]'}
-                      `} />
-                    </span>
-
-                    {/* Compact Card right */}
-                    <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 shadow-xs max-w-md flex items-center justify-between gap-4">
-                      <div>
-                        <h4 className="text-xs font-extrabold text-[#111827]">{item.role}</h4>
-                        <p className="text-[10px] text-[#6B7280] mt-0.5">{item.company} • Version {item.version}</p>
+              {/* C. TIMELINE VIEW */}
+              {viewType === 'timeline' && (
+                <motion.div
+                  key="timeline-view"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="relative border-l border-[#E5E7EB] ml-32 pl-8 space-y-6"
+                >
+                  {filteredAnalyses.map((item, idx) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, delay: idx * 0.08 }}
+                      className="relative"
+                    >
+                      {/* Date label left axis */}
+                      <div className="absolute -left-40 top-1 text-right w-28 text-[10px] font-bold text-[#9CA3AF] uppercase">
+                        {item.date}
                       </div>
-                      <span className={`text-xs font-extrabold
-                        ${item.score >= 85 ? 'text-[#2563EB]' : 'text-[#7C3AED]'}
+
+                      {/* Bullet */}
+                      <span className={`absolute -left-[39px] w-3.5 h-3.5 rounded-full border-2 bg-white flex items-center justify-center
+                        ${item.score >= 85 ? 'border-[#2563EB]' : 'border-[#7C3AED]'}
                       `}>
-                        {item.score}% Match
+                        <span className={`w-1.5 h-1.5 rounded-full
+                          ${item.score >= 85 ? 'bg-[#2563EB]' : 'bg-[#7C3AED]'}
+                        `} />
                       </span>
-                    </div>
 
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
+                      {/* Compact Card right */}
+                      <div className="bg-white border border-[#E5E7EB] rounded-xl p-4 shadow-xs max-w-md flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="text-xs font-extrabold text-[#111827]">{item.role}</h4>
+                          <p className="text-[10px] text-[#6B7280] mt-0.5">{item.company} • Version {item.version}</p>
+                        </div>
+                        <span className={`text-xs font-extrabold
+                          ${item.score >= 85 ? 'text-[#2563EB]' : 'text-[#7C3AED]'}
+                        `}>
+                          {item.score}% Match
+                        </span>
+                      </div>
 
-          </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4 text-xs font-semibold text-[#6B7280] pt-4">
-            <span>Showing 1-3 of 24 results</span>
-            
-            <div className="flex items-center gap-1.5">
-              <button className="p-1.5 border border-[#E5E7EB] rounded-lg hover:bg-gray-50 text-[#9CA3AF] disabled:opacity-40" disabled>
-                <ChevronLeft size={14} />
-              </button>
-              <button className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#2563EB] to-[#7C3AED] text-white text-xs font-bold shadow-sm">1</button>
-              <button className="w-8 h-8 rounded-lg border border-[#E5E7EB] hover:bg-gray-50 text-xs font-bold">2</button>
-              <button className="w-8 h-8 rounded-lg border border-[#E5E7EB] hover:bg-gray-50 text-xs font-bold">3</button>
-              <button className="p-1.5 border border-[#E5E7EB] rounded-lg hover:bg-gray-50 text-[#6B7280]">
-                <ChevronRight size={14} />
-              </button>
+            </AnimatePresence>
+          )}
+          
+          {filteredAnalyses.length > 0 && (
+            <div className="flex items-center justify-between mt-4 text-xs font-semibold text-[#6B7280] pt-4">
+              {/* Pagination */}
+              <span>Showing 1-{filteredAnalyses.length} of {filteredAnalyses.length} results</span>
+              
+              <div className="flex items-center gap-1.5">
+                <button className="p-1.5 border border-[#E5E7EB] rounded-lg hover:bg-gray-50 text-[#9CA3AF] disabled:opacity-40" disabled>
+                  <ChevronLeft size={14} />
+                </button>
+                <button className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#2563EB] to-[#7C3AED] text-white text-xs font-bold shadow-sm">1</button>
+                <button className="p-1.5 border border-[#E5E7EB] rounded-lg hover:bg-gray-50 text-[#6B7280] disabled:opacity-40" disabled>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </motion.div>
 
         {/* ════════ SECTION 2: TWO-COLUMN SPLIT ════════ */}
@@ -788,92 +837,85 @@ export default function HistoryPage() {
                 <Mic size={16} className="text-[#6B7280]" />
                 <span className="text-[10px] font-extrabold text-[#6B7280] uppercase tracking-widest">Interview Sessions</span>
               </div>
-              <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); alert('Redirecting to full sessions history...'); }}
-                className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-0.5"
-              >
-                See All Sessions <ChevronRight size={13} className="mt-0.5" />
-              </a>
             </div>
 
             <div className="space-y-4">
-              {sessions.map((item) => (
-                <div key={item.id} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      {/* Interactive audio play button */}
-                      <button
-                        onClick={() => toggleAudio(item.id)}
-                        className="w-10 h-10 rounded-full bg-[#EFF6FF] hover:bg-blue-100 text-[#2563EB] flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer shadow-xs"
-                      >
-                        {activeAudioPlayer === item.id && audioPlaying ? (
-                          <Pause size={15} fill="currentColor" />
-                        ) : (
-                          <Play size={15} fill="currentColor" className="ml-0.5" />
-                        )}
-                      </button>
-                      <div>
-                        <h4 className="text-xs font-extrabold text-[#111827]">{item.title}</h4>
-                        <p className="text-[10px] text-[#6B7280] mt-1">Duration: {item.duration} • {item.date}</p>
+              {sessions.length === 0 ? (
+                <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 text-center text-[#6B7280]">
+                  <p className="text-sm font-medium">No mock interviews completed yet.</p>
+                </div>
+              ) : (
+                sessions.map((item) => (
+                  <div key={item.id} className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        {/* Interactive chat view button */}
+                        <button
+                          onClick={() => setActiveAudioPlayer(activeAudioPlayer === item.id ? null : item.id)}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer shadow-xs
+                            ${activeAudioPlayer === item.id ? 'bg-[#2563EB] text-white' : 'bg-[#EFF6FF] hover:bg-blue-100 text-[#2563EB]'}
+                          `}
+                        >
+                          <MessageSquare size={16} fill="currentColor" />
+                        </button>
+                        <div>
+                          <h4 className="text-xs font-extrabold text-[#111827]">{item.title}</h4>
+                          <p className="text-[10px] text-[#6B7280] mt-1">{item.messageCount} Messages • {item.date}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-xs font-extrabold text-[#111827] block">Score: {item.score}/100</span>
+                        <span className={`inline-block text-[9px] font-extrabold uppercase px-2 py-0.5 rounded mt-1
+                          ${item.confidence === 'HIGH' ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-[#FFFBEB] text-[#F59E0B]'}
+                        `}>
+                          CONFIDENCE: {item.confidence}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-xs font-extrabold text-[#111827] block">Score: {item.score}/100</span>
-                      <span className={`inline-block text-[9px] font-extrabold uppercase px-2 py-0.5 rounded mt-1
-                        ${item.confidence === 'HIGH' ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-[#FFFBEB] text-[#F59E0B]'}
-                      `}>
-                        CONFIDENCE: {item.confidence}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Audio player expander */}
-                  <AnimatePresence>
-                    {activeAudioPlayer === item.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden border-t border-[#F3F4F6] pt-3.5"
-                      >
-                        <div className="flex items-center gap-4 bg-[#F8FAFC] rounded-xl p-3 border border-[#E5E7EB]">
-                          <span className="text-[9px] font-bold text-[#6B7280] font-mono">0:12</span>
-                          
-                          {/* Pulsing visual waves */}
-                          <div className="flex-1 flex items-end gap-0.5 h-6 select-none">
-                            {Array.from({ length: 28 }).map((_, i) => (
-                              <motion.span
-                                key={i}
-                                className="w-1 bg-[#2563EB] rounded-full flex-1"
-                                animate={audioPlaying ? {
-                                  height: [4, Math.random() * 20 + 4, 4]
-                                } : { height: 4 }}
-                                transition={{
-                                  repeat: Infinity,
-                                  duration: 0.8 + Math.random() * 0.4,
-                                  ease: 'easeInOut'
-                                }}
-                                style={{ height: 4 }}
-                              />
+                    {/* Chat transcript expander */}
+                    <AnimatePresence>
+                      {activeAudioPlayer === item.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden border-t border-[#F3F4F6] pt-3.5"
+                        >
+                          <div className="bg-[#F8FAFC] rounded-xl p-4 border border-[#E5E7EB] max-h-64 overflow-y-auto space-y-4">
+                            {item.messages && item.messages.filter(m => m.role !== 'system').map((msg, idx) => (
+                              <div key={idx} className={`flex flex-col gap-1 ${msg.role === 'interviewer' ? 'items-start' : 'items-end'}`}>
+                                {msg.role === 'candidate' && (
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[10px] font-bold text-[#4F46E5] uppercase tracking-wide">You</span>
+                                    <div className="w-4 h-4 rounded bg-[#E0E7FF] flex items-center justify-center text-[#4F46E5]">
+                                      <User size={10} />
+                                    </div>
+                                  </div>
+                                )}
+                                <div className={`px-4 py-2.5 max-w-[90%] shadow-sm text-left ${
+                                  msg.role === 'interviewer' 
+                                    ? 'bg-white border border-[#E5E7EB]/50 rounded-2xl rounded-tl-sm' 
+                                    : 'bg-[#EFF6FF] border border-[#BFDBFE]/50 rounded-2xl rounded-tr-sm'
+                                }`}>
+                                  <p className={`text-[12px] leading-relaxed font-medium ${msg.role === 'interviewer' ? 'text-[#111827]' : 'text-[#1E40AF]'}`}>
+                                    {msg.content}
+                                  </p>
+                                </div>
+                              </div>
                             ))}
+                            {(!item.messages || item.messages.length === 0) && (
+                              <p className="text-xs text-center text-[#6B7280]">No chat history available.</p>
+                            )}
                           </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                          <span className="text-[9px] font-bold text-[#6B7280] font-mono">18:42</span>
-                          <button
-                            onClick={() => toggleAudio(item.id)}
-                            className="p-1 rounded hover:bg-gray-200 text-[#6B7280] cursor-pointer"
-                          >
-                            <Headphones size={13} />
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                </div>
-              ))}
+                  </div>
+                ))
+              )}
             </div>
           </motion.div>
 
@@ -886,77 +928,83 @@ export default function HistoryPage() {
 
             <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between h-full">
               <div className="divide-y divide-[#F3F4F6] flex-1">
-                {versions.map((ver) => (
-                  <div
-                    key={ver.id}
-                    className="p-4 flex items-center justify-between gap-4 hover:bg-[#F8FAFC]/50 transition-colors group relative"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border
-                        ${ver.active ? 'bg-blue-50 text-[#2563EB] border-blue-200' : 'bg-gray-50 text-[#9CA3AF] border-[#E5E7EB]'}
-                      `}>
-                        <FileCheck size={16} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-[#111827] truncate max-w-[150px]">{ver.name}</span>
-                          {ver.active && (
-                            <span className="px-2 py-0.5 rounded text-[8px] font-extrabold text-[#2563EB] bg-[#EFF6FF] tracking-wider uppercase">
-                              Active
-                            </span>
-                          )}
+                {versions.length === 0 ? (
+                  <div className="p-8 text-center text-[#6B7280]">
+                    <p className="text-sm font-medium">No resumes uploaded.</p>
+                  </div>
+                ) : (
+                  versions.map((ver) => (
+                    <div
+                      key={ver.id}
+                      className="p-4 flex items-center justify-between gap-4 hover:bg-[#F8FAFC]/50 transition-colors group relative"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border
+                          ${ver.active ? 'bg-blue-50 text-[#2563EB] border-blue-200' : 'bg-gray-50 text-[#9CA3AF] border-[#E5E7EB]'}
+                        `}>
+                          <FileCheck size={16} />
                         </div>
-                        <p className="text-[10px] text-[#9CA3AF] mt-0.5">Updated {ver.date}</p>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-[#111827] truncate max-w-[150px]">{ver.name}</span>
+                            {ver.active && (
+                              <span className="px-2 py-0.5 rounded text-[8px] font-extrabold text-[#2563EB] bg-[#EFF6FF] tracking-wider uppercase">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#9CA3AF] mt-0.5">Uploaded {ver.date}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Kebab versions button */}
-                    <div>
-                      <button
-                        onClick={() => setActiveVersionKebab(activeVersionKebab === ver.id ? null : ver.id)}
-                        className="p-1 rounded-full hover:bg-gray-100 text-[#9CA3AF] hover:text-[#111827] cursor-pointer"
-                      >
-                        <MoreVertical size={14} />
-                      </button>
+                      {/* Kebab versions button */}
+                      <div>
+                        <button
+                          onClick={() => setActiveVersionKebab(activeVersionKebab === ver.id ? null : ver.id)}
+                          className="p-1 rounded-full hover:bg-gray-100 text-[#9CA3AF] hover:text-[#111827] cursor-pointer"
+                        >
+                          <MoreVertical size={14} />
+                        </button>
 
-                      <AnimatePresence>
-                        {activeVersionKebab === ver.id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="absolute right-4 mt-1 w-36 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-1 z-20 flex flex-col"
-                          >
-                            {!ver.active && (
+                        <AnimatePresence>
+                          {activeVersionKebab === ver.id && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              className="absolute right-4 mt-1 w-36 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-1 z-20 flex flex-col"
+                            >
+                              {!ver.active && (
+                                <button
+                                  onClick={() => handleRestoreVersion(ver)}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] rounded-lg text-left"
+                                >
+                                  <Star size={12} className="text-amber-400" /> Set as Active
+                                </button>
+                              )}
                               <button
-                                onClick={() => handleRestoreVersion(ver)}
+                                onClick={() => handleExportPDF(ver.name)}
                                 className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] rounded-lg text-left"
                               >
-                                <Star size={12} className="text-amber-400" /> Set as Active
+                                <Download size={12} /> Export
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleExportPDF(ver.name)}
-                              className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] rounded-lg text-left"
-                            >
-                              <Download size={12} /> Export
-                            </button>
-                            <button
-                              onClick={() => {
-                                setDeleteTarget({ id: ver.id, type: 'version' });
-                                setShowDeleteModal(true);
-                              }}
-                              className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#EF4444] hover:bg-red-50 rounded-lg text-left"
-                            >
-                              <Trash2 size={12} /> Delete
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                              <button
+                                onClick={() => {
+                                  setDeleteTarget({ id: ver.id, type: 'version' });
+                                  setShowDeleteModal(true);
+                                }}
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-[#EF4444] hover:bg-red-50 rounded-lg text-left"
+                              >
+                                <Trash2 size={12} /> Hide
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
 
-                  </div>
-                ))}
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Upload new version dashed row */}
@@ -966,7 +1014,7 @@ export default function HistoryPage() {
                 className="m-4 py-3 border border-dashed border-[#2563EB]/40 hover:border-[#2563EB] rounded-xl bg-[#EFF6FF]/20 hover:bg-[#EFF6FF]/40 text-[#2563EB] flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer select-none"
               >
                 <PlusCircle size={15} />
-                Upload New Version
+                Upload New Version via Dashboard
               </a>
             </div>
           </motion.div>

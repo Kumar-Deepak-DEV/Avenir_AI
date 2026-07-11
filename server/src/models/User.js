@@ -39,6 +39,29 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false, 
     },
+    currentRole: {
+      type: String,
+      default: '',
+    },
+    targetRole: {
+      type: String,
+      default: '',
+    },
+    photoUrl: {
+      type: String,
+      default: '',
+    },
+    settings: {
+      compactMode: { type: Boolean, default: false },
+      theme: { type: String, default: 'light' },
+      language: { type: String, default: 'English (US)' },
+      timezone: { type: String, default: '(GMT+5:30) India Standard Time' },
+      emailNotifications: { type: Boolean, default: true },
+      interviewReminders: { type: Boolean, default: true },
+      weeklyProgressReport: { type: Boolean, default: false },
+      marketingEmails: { type: Boolean, default: false },
+      twoFactorAuth: { type: Boolean, default: false },
+    },
   },
   {
     timestamps: true,
